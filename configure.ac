@@ -11,8 +11,10 @@ AC_CONFIG_MACRO_DIR([m4])
 
 AM_PATH_PYTHON(2.3)
 AC_PROG_SWIG(1.3.21)
+AC_PROG_CYTHON(0.12.1)
 AX_SWIG_ENABLE_CXX
 SWIG_PYTHON
+CYTHON_PYTHON
 
 dnl libtool versioning
 # +1 : 0 : +1  == adds new functions to the interface
@@ -56,7 +58,7 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([strcasecmp strdup strerror strndup])
 
-python_bindings=yes
+swig_python_bindings=yes
 AC_ARG_WITH([swig],
             [AS_HELP_STRING([--without-swig],
             [build Python bindings using swig (default is yes)])],
@@ -66,10 +68,27 @@ if test "$build_swig" = "true" -a "$SWIG" != "false" ; then
             SWIG_SUB=swig
 else
             SWIG_SUB=
-	    python_bindings=no
+	    swig_python_bindings=no
 fi
 
 AM_CONDITIONAL([HAVE_SWIG],[test "x$SWIG_SUB" = "xswig"])
+
+AC_SUBST([CYTHON_PLIST_INCLUDE_DIR])
+cython_python_bindings=yes
+AC_ARG_WITH([cython],
+            [AS_HELP_STRING([--without-cython],
+            [build Python bindings using cython (default is yes)])],
+            [build_cython=false],
+	    [build_cython=true])
+if test "$build_cython" = "true" -a "$CYTHON" != "false" ; then
+            CYTHON_SUB=cython
+			CYTHON_PLIST_INCLUDE_DIR=$($PKG_CONFIG --variable=includedir libplist)/plist/cython
+else
+            CYTHON_SUB=
+	    cython_python_bindings=no
+fi
+
+AM_CONDITIONAL([HAVE_CYTHON],[test "x$CYTHON_SUB" = "xcython"])
 
 AC_SUBST([DEV_SUB])
 
@@ -147,6 +166,7 @@ dev/Makefile
 tools/Makefile
 swig/Makefile
 docs/Makefile
+cython/Makefile
 libimobiledevice-1.0.pc
 doxygen.cfg
 ])
@@ -158,7 +178,8 @@ Configuration for $PACKAGE $VERSION:
   Install prefix: .........: $prefix
   Debug code ..............: $building_debug_code
   Dev tools ...............: $building_dev_tools
-  Python bindings .........: $python_bindings
+  SWIG Python bindings ....: $swig_python_bindings
+  Cython Python bindgins ..: $cython_python_bindings
 
   Now type 'make' to build $PACKAGE $VERSION,
   and then 'make install' for installation.

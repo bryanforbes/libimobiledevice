@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = src include swig dev tools docs
+SUBDIRS = src include swig cython dev tools
 
 DISTCHECK_CONFIGURE_FLAGS = --enable-dev-tools
 
