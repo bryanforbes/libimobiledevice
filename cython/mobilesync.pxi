@@ -29,18 +29,18 @@ cdef extern from "libimobiledevice/mobilesync.h":
     mobilesync_error_t mobilesync_receive(mobilesync_client_t client, plist.plist_t *plist)
     mobilesync_error_t mobilesync_send(mobilesync_client_t client, plist.plist_t plist)
 
-    mobilesync_error_t mobilesync_session_start(mobilesync_client_t client, char *data_class, mobilesync_anchors_t anchors, mobilesync_sync_type_t *sync_type, uint64_t *data_class_version)
-    mobilesync_error_t mobilesync_session_cancel(mobilesync_client_t client, char* reason)
-    mobilesync_error_t mobilesync_session_finish(mobilesync_client_t client)
+    mobilesync_error_t mobilesync_start(mobilesync_client_t client, char *data_class, mobilesync_anchors_t anchors, mobilesync_sync_type_t *sync_type, uint64_t *data_class_version)
+    mobilesync_error_t mobilesync_cancel(mobilesync_client_t client, char* reason)
+    mobilesync_error_t mobilesync_finish(mobilesync_client_t client)
 
     mobilesync_error_t mobilesync_get_all_records_from_device(mobilesync_client_t client)
     mobilesync_error_t mobilesync_get_changes_from_device(mobilesync_client_t client)
-    mobilesync_error_t mobilesync_receive_changes(mobilesync_client_t client, plist.plist_t *entities, uint8_t *is_last_record)
+    mobilesync_error_t mobilesync_receive_changes(mobilesync_client_t client, plist.plist_t *entities, uint8_t *is_last_record, plist.plist_t *actions)
     mobilesync_error_t mobilesync_acknowledge_changes_from_device(mobilesync_client_t client)
 
     mobilesync_error_t mobilesync_ready_to_send_changes_from_computer(mobilesync_client_t client)
     mobilesync_error_t mobilesync_send_changes(mobilesync_client_t client, plist.plist_t changes, uint8_t is_last_record, plist.plist_t actions)
-    mobilesync_error_t mobilesync_receive_remapping(mobilesync_client_t client, plist.plist_t *remapping)
+    mobilesync_error_t mobilesync_remap_identifiers(mobilesync_client_t client, plist.plist_t *mapping)
 
 
     mobilesync_anchors_t mobilesync_anchors_new(char *device_anchor, char *computer_anchor)
@@ -79,7 +79,7 @@ cdef class MobileSyncClient(DeviceLinkService):
             err = mobilesync_client_free(self._c_client)
             self.handle_error(err)
 
-    cpdef tuple session_start(self, bytes data_class, bytes device_anchor, bytes host_anchor):
+    cpdef tuple start(self, bytes data_class, bytes device_anchor, bytes host_anchor):
         cdef:
             mobilesync_anchors_t anchors = NULL
             mobilesync_sync_type_t sync_type
@@ -91,18 +91,18 @@ cdef class MobileSyncClient(DeviceLinkService):
             anchors = mobilesync_anchors_new(device_anchor, host_anchor)
 
         try:
-            self.handle_error(mobilesync_session_start(self._c_client, data_class, anchors, &sync_type, &data_class_version))
+            self.handle_error(mobilesync_start(self._c_client, data_class, anchors, &sync_type, &data_class_version))
             return (sync_type, <bint>data_class_version)
         except Exception, e:
             raise
         finally:
             mobilesync_anchors_free(anchors)
 
-    cpdef session_finish(self):
-        self.handle_error(mobilesync_session_finish(self._c_client))
+    cpdef finish(self):
+        self.handle_error(mobilesync_finish(self._c_client))
 
-    cpdef session_cancel(self, bytes reason):
-        self.handle_error(mobilesync_session_cancel(self._c_client, reason))
+    cpdef cancel(self, bytes reason):
+        self.handle_error(mobilesync_cancel(self._c_client, reason))
 
     cpdef get_all_records_from_device(self):
         self.handle_error(mobilesync_get_all_records_from_device(self._c_client))
@@ -114,13 +114,16 @@ cdef class MobileSyncClient(DeviceLinkService):
         cdef:
             plist.plist_t entities = NULL
             uint8_t is_last_record = 0
+            plist.plist_t actions = NULL
 
         try:
-            self.handle_error(mobilesync_receive_changes(self._c_client, &entities, &is_last_record))
-            return (plist.plist_t_to_node(entities), <bint>is_last_record)
+            self.handle_error(mobilesync_receive_changes(self._c_client, &entities, &is_last_record, &actions))
+            return (plist.plist_t_to_node(entities), <bint>is_last_record, plist.plist_t_to_node(actions))
         except Exception, e:
             if entities != NULL:
                 plist.plist_free(entities)
+            if actions != NULL:
+                plist.plist_free(actions)
             raise
 
     cpdef acknowledge_changes_from_device(self):
@@ -132,11 +135,11 @@ cdef class MobileSyncClient(DeviceLinkService):
     cpdef send_changes(self, plist.Node changes, bint is_last_record, plist.Node actions):
         self.handle_error(mobilesync_send_changes(self._c_client, changes._c_node, is_last_record, actions._c_node))
 
-    cpdef receive_remapping(self):
+    cpdef remap_identifiers(self):
         cdef plist.plist_t remapping = NULL
 
         try:
-            self.handle_error(mobilesync_receive_remapping(self._c_client, &remapping))
+            self.handle_error(mobilesync_remap_identifiers(self._c_client, &remapping))
             return plist.plist_t_to_node(remapping)
         except Exception, e:
             if remapping != NULL:
