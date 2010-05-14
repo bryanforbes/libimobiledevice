@@ -38,7 +38,7 @@ static mobilesync_error_t mobilesync_get_all_contacts(mobilesync_client_t client
 	mobilesync_error_t ret = MOBILESYNC_E_UNKNOWN_ERROR;
 	GTimeVal current_time = { 0, 0 };
 	mobilesync_sync_type_t sync_type;
-	uint64_t data_class_version = 107;
+	uint64_t device_data_class_version;
 	char *xml_out = NULL;
 	plist_t records = NULL;
 	gchar *host_anchor = NULL;
@@ -51,7 +51,7 @@ static mobilesync_error_t mobilesync_get_all_contacts(mobilesync_client_t client
 	mobilesync_anchors_t anchors = mobilesync_anchors_new(NULL, host_anchor);
 	g_free(host_anchor);
 
-	ret = mobilesync_start(client, "com.apple.Calendars", anchors, &sync_type, &data_class_version);
+	ret = mobilesync_start(client, "com.apple.Calendars", anchors, 106, &sync_type, &device_data_class_version);
 
 	mobilesync_anchors_free(anchors);
 
