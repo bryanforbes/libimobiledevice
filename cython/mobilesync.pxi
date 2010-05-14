@@ -29,7 +29,7 @@ cdef extern from "libimobiledevice/mobilesync.h":
     mobilesync_error_t mobilesync_receive(mobilesync_client_t client, plist.plist_t *plist)
     mobilesync_error_t mobilesync_send(mobilesync_client_t client, plist.plist_t plist)
 
-    mobilesync_error_t mobilesync_start(mobilesync_client_t client, char *data_class, mobilesync_anchors_t anchors, mobilesync_sync_type_t *sync_type, uint64_t *data_class_version)
+    mobilesync_error_t mobilesync_start(mobilesync_client_t client, char *data_class, mobilesync_anchors_t anchors, uint64_t computer_data_class_version, mobilesync_sync_type_t *sync_type, uint64_t *data_class_version)
     mobilesync_error_t mobilesync_cancel(mobilesync_client_t client, char* reason)
     mobilesync_error_t mobilesync_finish(mobilesync_client_t client)
 
@@ -79,7 +79,7 @@ cdef class MobileSyncClient(DeviceLinkService):
             err = mobilesync_client_free(self._c_client)
             self.handle_error(err)
 
-    cpdef tuple start(self, bytes data_class, bytes device_anchor, bytes host_anchor):
+    cpdef tuple start(self, bytes data_class, bytes device_anchor, bytes host_anchor, int computer_data_class_version):
         cdef:
             mobilesync_anchors_t anchors = NULL
             mobilesync_sync_type_t sync_type
@@ -91,8 +91,8 @@ cdef class MobileSyncClient(DeviceLinkService):
             anchors = mobilesync_anchors_new(device_anchor, host_anchor)
 
         try:
-            self.handle_error(mobilesync_start(self._c_client, data_class, anchors, &sync_type, &data_class_version))
-            return (sync_type, <bint>data_class_version)
+            self.handle_error(mobilesync_start(self._c_client, data_class, anchors, computer_data_class_version, &sync_type, &data_class_version))
+            return (sync_type, <int>data_class_version)
         except Exception, e:
             raise
         finally:
